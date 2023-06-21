@@ -21,7 +21,7 @@ convertController.htmltopdf = async (req, res) => {
     return res.json(helpers.sendMessage(0, 'PDF not generated'))
   }
 
-  // Now add the header footer and other pdf options
+  // Now add the header footer and other pdf metadata
   const result = await helpers.addHeaderFooterMetaData(`${folderName}/${fileName}`, req.body.header, req.body.footer, req.body.watermark, req.body.title, req.body.author)
   if (!result.status) {
     await helpers.cleanUp(folderName)
