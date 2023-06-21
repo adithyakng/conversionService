@@ -1,0 +1,40 @@
+{
+  "name": "html_to_pdf",
+  "version": "1.0.0",
+  "description": "An NodeJS service to convert html content to pdf",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/adithyakng/htmlToPdf.git"
+  },
+  "author": "Adithya KNG",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/adithyakng/htmlToPdf/issues"
+  },
+  "homepage": "https://github.com/adithyakng/htmlToPdf#readme",
+  "dependencies": {
+    "body-parser": "^1.20.2",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "fs": "^0.0.1-security",
+    "node-qpdf": "^1.0.3",
+    "nodemon": "^2.0.22",
+    "pdf-lib": "^1.17.1",
+    "puppeteer": "^20.7.2",
+    "sharp": "^0.32.1",
+    "uuid": "^9.0.0"
+  },
+  "devDependencies": {
+    "eslint": "^8.43.0",
+    "eslint-config-standard": "^17.1.0",
+    "eslint-plugin-import": "^2.27.5",
+    "eslint-plugin-n": "^16.0.0",
+    "eslint-plugin-promise": "^6.1.1"
+  }
+}
