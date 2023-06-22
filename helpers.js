@@ -179,17 +179,22 @@ function base64ToBuffer (base64String) {
 }
 
 async function encryptPdf (password, inputPdfFilePath, outputPdfFilePath) {
-  const options = {
-    keyLength: 256,
-    password,
-    outputFile: outputPdfFilePath,
-    restrictions: {
-      modify: 'none',
-      extract: 'n'
+  try {
+    const options = {
+      keyLength: 256,
+      password,
+      outputFile: outputPdfFilePath,
+      restrictions: {
+        modify: 'none',
+        extract: 'n'
+      }
     }
-  }
 
-  await qpdf.encrypt(inputPdfFilePath, options)
+    await qpdf.encrypt(inputPdfFilePath, options)
+    return sendMessage(1, outputPdfFilePath)
+  } catch (error) {
+    return sendMessage(0, error)
+  }
 }
 
 function convertPdfToBase64 (filePath) {

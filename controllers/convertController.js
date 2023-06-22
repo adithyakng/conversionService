@@ -37,7 +37,10 @@ convertController.htmltopdf = async (req, res) => {
   // Now check if we require password protection
   if (req.body.password) {
     outputFileName = folderName + '/' + helpers.getUniqueID() + '.pdf'
-    await helpers.encryptPdf(req.body.password, result.message, outputFileName)
+    const encrypedResponse = await helpers.encryptPdf(req.body.password, result.message, outputFileName)
+    if (!encrypedResponse.status || !fs.existsSync(outputFileName)) {
+      return res.json(helpers.sendMessage(1, encrypedResponse.message))
+    }
   }
 
   // returnType 0 or undefined means return base64 encoded pdf
