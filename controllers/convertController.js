@@ -42,10 +42,11 @@ convertController.htmltopdf = async (req, res) => {
 
   // returnType 0 or undefined means return base64 encoded pdf
   if (!req.body.returnType) {
+    const base64String = helpers.convertPdfToBase64(outputFileName)
     await helpers.cleanUp(folderName)
     return res.json({
       status: 1,
-      pdf: helpers.convertPdfToBase64(outputFileName)
+      pdf: base64String
     })
   }
 
