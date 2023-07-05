@@ -12,8 +12,9 @@ convertController.htmltopdf = async (req, res) => {
   const folderName = './files/' + helpers.getUniqueID()
   const fileName = helpers.getUniqueID()
   await mkdir(folderName)
+  helpers.addDefaultMargins(req)
   // convert the html content to pdf
-  await helpers.convertHTMLtoPDF(html, `${folderName}/${fileName}`)
+  await helpers.convertHTMLtoPDF(html, `${folderName}/${fileName}`, req)
 
   // Check if the pdf is generated
   if (!fs.existsSync(`${folderName}/${fileName}.pdf`)) {
@@ -22,7 +23,7 @@ convertController.htmltopdf = async (req, res) => {
   }
 
   // Now add the header footer and other pdf metadata
-  const result = await helpers.addHeaderFooterMetaData(`${folderName}/${fileName}`, req.body.header, req.body.footer, req.body.watermark, req.body.title, req.body.author)
+  const result = await helpers.addHeaderFooterMetaData(`${folderName}/${fileName}`, req)
   if (!result.status) {
     await helpers.cleanUp(folderName)
     return res.json(result)

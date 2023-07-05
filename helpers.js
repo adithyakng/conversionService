@@ -6,6 +6,8 @@ const fs = require('fs')
 const qpdf = require('node-qpdf')
 const sharp = require('sharp')
 
+const gapSize = 0.75
+
 function sendMessage (status = 1, message = 'something went wrong') {
   return {
     status,
@@ -13,23 +15,38 @@ function sendMessage (status = 1, message = 'something went wrong') {
   }
 }
 
-async function convertHTMLtoPDF (html, outputFileName) {
+async function convertHTMLtoPDF (html, outputFileName, req) {
   const browser = await puppeteer.launch()
   const page = await browser.newPage()
+  const header = req.body.header
+  const footer = req.body.footer
 
+  let top = req.body.margins.top
+  let bottom = req.body.margins.bottom
+
+  if (header) {
+    top = req.body.margins.top + (req.body.headerHeight ? req.body.headerHeight : 100) + (gapSize * (req.body.headerHeight ? req.body.headerHeight : 100)) // ( gapSize is used for getting space between header and the content)
+  }
+  if (footer) {
+    bottom = req.body.margins.bottom + (req.body.footerHeight ? req.body.footerHeight : 100) + (gapSize * (req.body.footerHeight ? req.body.footerHeight : 100))
+  }
+  const margins =
+     {
+       top: `${top}px`,
+       bottom: `${bottom}px`,
+       left: `${req.body.margins.left}px`,
+       right: `${req.body.margins.right}px`
+     }
   // Read the HTML file
   const htmlContent = html
-
-  await page.setContent(htmlContent)
+  await page.setContent(htmlContent, { waitUntil: ['load', 'networkidle0'] })
 
   // Generate PDF
   await page.pdf({
     path: `${outputFileName}.pdf`,
+    printBackground: true,
     format: 'A4',
-    margin: {
-      top: '100px',
-      bottom: '100px'
-    }
+    margin: margins
   })
 
   await browser.close()
@@ -41,10 +58,16 @@ function getUniqueID () {
   return uuid1 + '_' + Date.now() + '_' + uuid2
 }
 
-async function addHeaderFooterMetaData (pdfFilePath, header, footer, watermark, title, author) {
+async function addHeaderFooterMetaData (pdfFilePath, req) {
   try {
     // Read the existing PDF file
     const pdfBytes = fs.readFileSync(`${pdfFilePath}.pdf`)
+    const header = req.body.header
+    const footer = req.body.footer
+    const watermark = req.body.watermark
+    const title = req.body.title
+    const author = req.body.author
+    const watermarkOpacity = req.body.opacity ? req.body.opacity : 0.2
 
     // Create a new PDF document
     const pdfDoc = await PDFDocument.load(pdfBytes)
@@ -106,23 +129,23 @@ async function addHeaderFooterMetaData (pdfFilePath, header, footer, watermark, 
 
       // Add the header image to the top left corner
       if (header) {
-        const headerImageDims = headerImage.scale(0.5)
+        const headerHeight = req.body.headerHeight ? req.body.headerHeight : 100
         page.drawImage(headerImage, {
-          x: 10,
-          y: page.getHeight() - headerImageDims.height + 50,
-          width: page.getWidth() - 100,
-          height: 50
+          x: req.body.margins.left,
+          y: page.getHeight() - headerHeight - req.body.margins.top,
+          width: page.getWidth() - req.body.margins.left - req.body.margins.right,
+          height: headerHeight
         })
       }
 
       // Add the footer image to the bottom center
       if (footer) {
-        const footerImageDims = footerImage.scale(0.5)
+        const footerHeight = req.body.footerHeight ? req.body.footerHeight : 100
         page.drawImage(footerImage, {
-          x: page.getWidth() / 2 - footerImageDims.width / 2,
-          y: 10,
-          width: footerImageDims.width,
-          height: footerImageDims.height
+          x: req.body.margins.left,
+          y: 0 + req.body.margins.bottom,
+          width: page.getWidth() - req.body.margins.left - req.body.margins.right,
+          height: footerHeight
         })
       }
       if (watermark) {
@@ -132,7 +155,7 @@ async function addHeaderFooterMetaData (pdfFilePath, header, footer, watermark, 
           y: page.getHeight() / 2 - watermarkImageDims.height / 2,
           width: watermarkImageDims.width,
           height: watermarkImageDims.height,
-          opacity: 0.5
+          opacity: watermarkOpacity
         })
       }
     }
@@ -140,7 +163,7 @@ async function addHeaderFooterMetaData (pdfFilePath, header, footer, watermark, 
     // Set the PDF meta data
 
     // Producer needs to be given so the names of underlying packages used are not exposed
-    pdfDoc.setProducer('Darwinbox PDF Generator😃')
+    pdfDoc.setProducer(req.body.producer ? req.body.producer : 'Darwinbox PDF Generator😃')
 
     // Set the title if present
     if (title) {
@@ -158,7 +181,8 @@ async function addHeaderFooterMetaData (pdfFilePath, header, footer, watermark, 
 
     return sendMessage(1, `${pdfFilePath}_output.pdf`)
   } catch (error) {
-    return sendMessage(0, error)
+    console.log(error)
+    return sendMessage(0, error.message)
   }
 }
 
@@ -193,7 +217,7 @@ async function encryptPdf (password, inputPdfFilePath, outputPdfFilePath) {
     await qpdf.encrypt(inputPdfFilePath, options)
     return sendMessage(1, outputPdfFilePath)
   } catch (error) {
-    return sendMessage(0, error)
+    return sendMessage(0, error.message)
   }
 }
 
@@ -211,6 +235,16 @@ async function cleanUp (folderPath) {
   await fs.promises.rm(folderPath, { recursive: true })
 }
 
+function addDefaultMargins (req) {
+  if (!req.body.margins) {
+    req.body.margins = {}
+  }
+  req.body.margins.top = req.body.margins.top ? req.body.margins.top : 20
+  req.body.margins.bottom = req.body.margins.bottom ? req.body.margins.bottom : 20
+  req.body.margins.left = req.body.margins.left ? req.body.margins.left : 20
+  req.body.margins.right = req.body.margins.right ? req.body.margins.right : 20
+}
+
 module.exports = {
   sendMessage,
   convertHTMLtoPDF,
@@ -218,5 +252,6 @@ module.exports = {
   addHeaderFooterMetaData,
   encryptPdf,
   convertPdfToBase64,
-  cleanUp
+  cleanUp,
+  addDefaultMargins
 }
