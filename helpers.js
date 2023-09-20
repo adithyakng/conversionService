@@ -5,6 +5,8 @@ const { PDFDocument } = require('pdf-lib')
 const fs = require('fs')
 const qpdf = require('node-qpdf')
 const sharp = require('sharp')
+const { toHtml } = require('./libreOfficeHelper')
+const path = require('path')
 
 function sendMessage (status = 1, message = 'something went wrong') {
   return {
@@ -211,6 +213,25 @@ async function cleanUp (folderPath) {
   await fs.promises.rm(folderPath, { recursive: true })
 }
 
+async function convertDocxToHtml (file, folderPath, fileName, req, res) {
+  // Ensure that before the function is called file is present.
+  // Write file to the folder with the fileName
+  file.originalname = file.originalname.replace(/[/\\?%*:|"<> ]/g, '-')
+  const inputFilePath = `${folderPath}/${fileName}_input_${file.originalname}`
+
+  fs.writeFileSync(path.join(__dirname, inputFilePath), file.buffer)
+  if (!fs.existsSync(path.join(__dirname, inputFilePath))) {
+    await cleanUp(path.join(__dirname, folderPath))
+    return res.json({
+      status: 0,
+      error: 'Unable to save file to disk'
+    })
+  }
+
+  // Now file is saved on the disk. Now convert it to html using libreoffice
+  await toHtml(path.join(__dirname, inputFilePath), path.join(__dirname, folderPath), req, res, `${fileName}_input_${file.originalname}`.replace(/\.[^/.]+$/, ''), folderPath)
+}
+
 module.exports = {
   sendMessage,
   convertHTMLtoPDF,
@@ -218,5 +239,6 @@ module.exports = {
   addHeaderFooterMetaData,
   encryptPdf,
   convertPdfToBase64,
-  cleanUp
+  cleanUp,
+  convertDocxToHtml
 }
