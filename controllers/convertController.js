@@ -1,6 +1,7 @@
 const { mkdir } = require('fs/promises')
 const helpers = require('../helpers')
 const fs = require('fs')
+const path = require('path')
 
 const convertController = {}
 convertController.htmltopdf = async (req, res) => {
@@ -62,6 +63,23 @@ convertController.htmltopdf = async (req, res) => {
   res.setHeader('Content-Disposition', 'attachment; filename=output.pdf')
   file.pipe(res)
   await helpers.cleanUp(folderName)
+}
+
+convertController.docxToHtml = async (req, res) => {
+  const file = req.file
+  if (!file) {
+    return res.json(helpers.sendMessage(0, 'Please upload a file'))
+  }
+  if (file.mimetype !== 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
+    return res.json(helpers.sendMessage(0, 'Please upload a docx file'))
+  }
+  // First create a folder with a unique name
+  const folderName = '/files/' + helpers.getUniqueID()
+  const fileName = helpers.getUniqueID()
+  await mkdir(path.join(__dirname, '..', folderName))
+
+  // convert the docx content to html
+  await helpers.convertDocxToHtml(file, folderName, fileName, req, res)
 }
 
 module.exports = convertController
